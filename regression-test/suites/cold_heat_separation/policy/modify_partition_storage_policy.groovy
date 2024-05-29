@@ -109,7 +109,7 @@ suite("modify_partition_storage_policy") {
 
 //    3. 给当前partition添加storage policy, 并比对fe和be的元数据中Storage信息是否对齐
     def alter_table_modify_partition_storage_policy_result = try_sql """
-        ALTER TABLE ${tblName} MODIFY PARTITION (${tblName}) SET("storage_policy"=`${policy_name1}`);
+        ALTER TABLE ${tblName} MODIFY PARTITION (${tblName}) SET("storage_policy"="${policy_name1}");
     """
 
     // 3.1 get storage policy from fe metadata
@@ -119,13 +119,20 @@ suite("modify_partition_storage_policy") {
         // 12列是storage policy
         assertTrue(par[12] == "${policy_name1}")
     }
+    def polices = sql """show storage policy;"""
+    def policyId;
+    for (p in polices) {
+        if ( p[0] == $ { policy_name1 }) {
+            policyId = p[1]
+        }
+    }
 
     // 3.2 get storage policy from be metadata
-    def tabletResult = sql """SHOW TABLETS FROM TABLE ${tblName} PARTITION ${tblName};"""
+    def tabletResult = sql """SHOW TABLETS FROM ${tblName} PARTITION ${tblName};"""
 
     assert (tabletResult.size() > 0)
 
-    def tablet_metadata_url = tabletResult[0]["MetaUrl"]
+    def tablet_metadata_url = tabletResult[0][17]
 
     def (code, out, err) = curl("GET", tablet_metadata_url)
 
@@ -136,12 +143,13 @@ suite("modify_partition_storage_policy") {
     def json = parseJson(out)
 
     // assert is equal
-    assertEquals(json.storage_policy_id, policy_name1)
+    //TODO  policy id
+    assertEquals(json.storage_policy_id, policyId)
 
     // 4. alter policy with different resources
     try {
         sql """
-        ALTER TABLE ${tblName} MODIFY PARTITION (${tblName}) SET("storage_policy"=`${policy_name2}`);
+        ALTER TABLE ${tblName} MODIFY PARTITION (${tblName}) SET("storage_policy"="${policy_name2}");
     """
     }
     catch (Exception e) {
@@ -156,11 +164,13 @@ suite("modify_partition_storage_policy") {
     }
 
     // 4.2 be
-    def tabletResultAfterAlter = sql """SHOW TABLETS FROM TABLE ${tblName} PARTITION ${tblName};"""
+    def tabletResultAfterAlter = sql """SHOW TABLETS FROM ${tblName} PARTITION ${tblName};"""
 
     assert (tabletResultAfterAlter.size() > 0)
 
-    def tablet_metadata_url_after_alter = tabletResult[0]["MetaUrl"]
+
+    def tablet_metadata_url_after_alter = tabletResult[0][19]
+
 
     def (code1, out1, err1) = curl("GET", tablet_metadata_url_after_alter)
 
@@ -171,6 +181,6 @@ suite("modify_partition_storage_policy") {
     def json1 = parseJson(out)
 
     // assert is equal
-    assertEquals(json1.storage_policy_id, policy_name1)
+    assertEquals(json1.storage_policy_id, policyId)
 
 }
