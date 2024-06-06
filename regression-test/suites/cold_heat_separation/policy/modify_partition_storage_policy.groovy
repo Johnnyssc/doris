@@ -73,7 +73,7 @@ suite("modify_partition_storage_policy") {
             CREATE STORAGE POLICY IF NOT EXISTS `${policy_name1}`
             PROPERTIES(
             "storage_resource" = "${resource1}",
-            "cooldown_datetime" = "2025-06-18 00:00:00"
+            "cooldown_datetime" = "2999-06-18 00:00:00"
             );
         """
 
@@ -81,7 +81,7 @@ suite("modify_partition_storage_policy") {
             CREATE STORAGE POLICY IF NOT EXISTS `${policy_name2}`
             PROPERTIES(
             "storage_resource" = "${resource2}",
-            "cooldown_datetime" = "2026-06-18 00:00:00"
+            "cooldown_datetime" = "2999-06-18 00:00:00"
             );
         """
 
@@ -113,7 +113,6 @@ suite("modify_partition_storage_policy") {
     def tablet_result = sql """SHOW TABLETS FROM ${tblName} PARTITION ${tblName};"""
     def metadata_url = tablet_result[0][17]
     def (code, out, err) = curl("GET", metadata_url)
-    logger.info(" get be meta data: code=" + code + ", out=" + out + ", err=" + err)
     def json = parseJson(out)
     def be__policy_id1 = Integer.parseInt(json.storage_policy_id.toString())
 
@@ -142,8 +141,7 @@ suite("modify_partition_storage_policy") {
     def tablet_result2 = sql """SHOW TABLETS FROM ${tblName} PARTITION ${tblName};"""
     def metadata_url2 = tablet_result2[0][17]
     def (code2, out2, err2) = curl("GET", metadata_url2)
-    logger.info(" get be meta data: code=" + code2 + ", out=" + out2 + ", err=" + err2)
-    def json2 = parseJson(out)
+    def json2 = parseJson(out2)
     def be_policy_id2 = Integer.parseInt(json2.storage_policy_id.toString())
     assertEquals(be_policy_id2, policy_id)
 }
